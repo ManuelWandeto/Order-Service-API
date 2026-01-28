@@ -26,7 +26,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 
 export const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const data = ProductZodSchema.partial().parse(req.body); // Allow partial updates
     const product = await productRepo.update(id, data);
     if (!product) {
