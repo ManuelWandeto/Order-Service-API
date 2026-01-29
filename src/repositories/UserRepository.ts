@@ -1,5 +1,5 @@
-import { BaseRepository } from '../base/BaseRepository';
-import { IUser, UserModel } from '../../models/User';
+import { BaseRepository } from './base/BaseRepository';
+import { IUser, UserModel } from '../models/User';
 
 export class UserRepository extends BaseRepository<IUser> {
   constructor() {
