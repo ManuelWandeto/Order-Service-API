@@ -31,7 +31,7 @@ export const payOrder = async (req: AuthRequest, res: Response, next: NextFuncti
   try {
     if (!req.user) throw new Error('User not authenticated');
     const { id } = req.params as { id: string };
-    const order = await orderService.payOrder(id, req.user.userId);
+    const order = await orderService.payOrder(id, req.user.userId, req.user.role);
     res.json(order);
   } catch (error) {
     next(error);
@@ -42,7 +42,7 @@ export const cancelOrder = async (req: AuthRequest, res: Response, next: NextFun
   try {
     if (!req.user) throw new Error('User not authenticated');
     const { id } = req.params as { id: string };
-    const order = await orderService.cancelOrder(id);
+    const order = await orderService.cancelOrder(id, req.user.userId, req.user.role);
     res.json(order);
   } catch (error) {
     next(error);

@@ -1,15 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
 
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('❌ Error:', err.message);
 
   // Custom parsing can be added here (e.g., ZodError, Mongoose ValidationError)
-  if (err.name === 'ZodError') {
-    return res.status(400).json({ message: 'Validation Error', errors: err.errors });
+  if (err instanceof ZodError) {
+    return res.status(400).json({
+      message: 'Validation Error',
+      errors: err.issues.map((issue) => ({
+        path: issue.path,
+        message: issue.message
+      }))
+    });
   }
 
   // Map specific error messages to status codes
-  if (err.message === 'Email already exists') {
+  if (err.message === 'Email already exists' || err.message?.includes('Product with name')) {
     return res.status(409).json({ message: err.message });
   }
 
@@ -21,13 +28,17 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
     return res.status(404).json({ message: err.message });
   }
 
+  if (err.message?.includes('Cannot cancel paid orders')) {
+    return res.status(403).json({ message: err.message });
+  }
+
   if (err.message?.includes('Insufficient stock') ||
       err.message?.includes('Product') ||
       err.message?.includes('quantity')) {
     return res.status(400).json({ message: err.message });
   }
 
-  if (err.message?.includes('cancelled') || err.message?.includes('paid')) {
+  if (err.message?.includes('cancelled') || err.message?.includes('paid') || err.message?.includes('only')) {
     return res.status(409).json({ message: err.message });
   }
 

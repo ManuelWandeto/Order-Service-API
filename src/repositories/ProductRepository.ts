@@ -6,5 +6,7 @@ export class ProductRepository extends BaseRepository<IProduct> {
     super(ProductModel);
   }
 
-  // Custom methods if needed, e.g., checkStock
+  async findByName(name: string): Promise<IProduct | null> {
+    return this.model.findOne({ name }).exec();
+  }
 }

@@ -103,13 +103,15 @@ export class OrderService {
     return this.orderRepo.findByUserId(userId);
   }
 
-  async payOrder(orderId: string, userId: string): Promise<IOrder> {
+  async payOrder(orderId: string, userId: string, role: string): Promise<IOrder> {
     // Idempotent: if already paid, return it.
     const order = await this.orderRepo.findById(orderId);
     if (!order) throw new Error('Order not found');
 
-    // Check ownership if not admin (logic can be in controller, but service is safer)
-    // For now assuming controller checks ownership or passes safe params.
+    // Authorization: Customer can only pay their own order, Admin can pay any order
+    if (role !== 'admin' && order.userId !== userId) {
+      throw new Error('You can only pay for your own orders');
+    }
 
     if (order.status === OrderStatus.PAID) return order;
     if (order.status === OrderStatus.CANCELLED) throw new Error('Order is cancelled');
@@ -120,7 +122,7 @@ export class OrderService {
     return updatedOrder;
   }
 
-  async cancelOrder(orderId: string): Promise<IOrder> {
+  async cancelOrder(orderId: string, userId: string, role: string): Promise<IOrder> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -128,13 +130,22 @@ export class OrderService {
       const order = await this.orderRepo.findById(orderId);
       if (!order) throw new Error('Order not found');
 
+      // Authorization: Customer can only cancel their own order, Admin can cancel any order
+      if (role !== 'admin' && order.userId !== userId) {
+        throw new Error('You can only cancel your own orders');
+      }
+
+      // Idempotent: if already cancelled, return it
       if (order.status === OrderStatus.CANCELLED) {
-        await session.abortTransaction(); // or commit nothing
+        await session.abortTransaction();
         return order;
       }
 
-      // If paid, allow cancel? Req says "if paid -> either 409 or allow".
-      // I'll allow it but Refund logic is out of scope, just restore stock.
+      // Customer can only cancel 'created' orders (unpaid)
+      // Admin can cancel orders at any stage
+      if (role !== 'admin' && order.status === OrderStatus.PAID) {
+        throw new Error('Cannot cancel paid orders. Please contact support for refunds.');
+      }
 
       // Restore stock
       for (const item of order.items) {

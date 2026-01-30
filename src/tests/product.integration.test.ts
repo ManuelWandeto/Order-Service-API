@@ -93,7 +93,7 @@ describe('Product API Integration Tests', () => {
       expect(res.status).toBe(401);
     });
 
-    it('should return 400 for invalid data', async () => {
+    it('should return 400 with detailed validation errors for invalid data', async () => {
       const res = await request(app)
         .post('/products')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -104,9 +104,12 @@ describe('Product API Integration Tests', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(Array.isArray(res.body.errors)).toBe(true);
     });
 
-    it('should return 400 for non-integer price', async () => {
+    it('should return 400 with detailed validation errors for non-integer price', async () => {
       const res = await request(app)
         .post('/products')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -117,9 +120,14 @@ describe('Product API Integration Tests', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(res.body.errors[0]).toHaveProperty('path');
+      expect(res.body.errors[0]).toHaveProperty('message');
+      expect(res.body.errors[0].path).toContain('price');
     });
 
-    it('should return 400 for missing fields', async () => {
+    it('should return 400 with detailed validation errors for missing fields', async () => {
       const res = await request(app)
         .post('/products')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -128,6 +136,31 @@ describe('Product API Integration Tests', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(res.body.errors[0]).toHaveProperty('path');
+      expect(res.body.errors[0]).toHaveProperty('message');
+    });
+
+    it('should return 409 when creating product with duplicate name', async () => {
+      await ProductModel.create({
+        name: 'Unique Product',
+        price: 1999,
+        stock: 50,
+      });
+
+      const res = await request(app)
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Unique Product',
+          price: 2999,
+          stock: 100,
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.message).toContain('Product with name');
+      expect(res.body.message).toContain('already exists');
     });
   });
 
@@ -229,6 +262,39 @@ describe('Product API Integration Tests', () => {
         });
 
       expect(res.status).toBe(404);
+    });
+
+    it('should return 409 when updating to duplicate product name', async () => {
+      await ProductModel.create({
+        name: 'Another Product',
+        price: 2000,
+        stock: 20,
+      });
+
+      const res = await request(app)
+        .patch(`/products/${productId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Another Product',
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.message).toContain('Product with name');
+      expect(res.body.message).toContain('already exists');
+    });
+
+    it('should allow updating product with its own name', async () => {
+      const res = await request(app)
+        .patch(`/products/${productId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Original Product',
+          price: 1500,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.name).toBe('Original Product');
+      expect(res.body.price).toBe(1500);
     });
   });
 });

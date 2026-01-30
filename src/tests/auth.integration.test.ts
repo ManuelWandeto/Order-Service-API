@@ -59,7 +59,7 @@ describe('Auth API Integration Tests', () => {
       expect(res.body.message).toContain('Email already exists');
     });
 
-    it('should return 400 for invalid email format', async () => {
+    it('should return 400 with detailed validation errors for invalid email format', async () => {
       const res = await request(app)
         .post('/auth/register')
         .send({
@@ -68,9 +68,16 @@ describe('Auth API Integration Tests', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(Array.isArray(res.body.errors)).toBe(true);
+      expect(res.body.errors.length).toBeGreaterThan(0);
+      expect(res.body.errors[0]).toHaveProperty('path');
+      expect(res.body.errors[0]).toHaveProperty('message');
+      expect(res.body.errors[0].path).toContain('email');
     });
 
-    it('should return 400 for password less than 6 characters', async () => {
+    it('should return 400 with detailed validation errors for password less than 6 characters', async () => {
       const res = await request(app)
         .post('/auth/register')
         .send({
@@ -79,9 +86,15 @@ describe('Auth API Integration Tests', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(Array.isArray(res.body.errors)).toBe(true);
+      expect(res.body.errors[0]).toHaveProperty('path');
+      expect(res.body.errors[0]).toHaveProperty('message');
+      expect(res.body.errors[0].path).toContain('password');
     });
 
-    it('should return 400 for missing fields', async () => {
+    it('should return 400 with detailed validation errors for missing fields', async () => {
       const res = await request(app)
         .post('/auth/register')
         .send({
@@ -89,6 +102,11 @@ describe('Auth API Integration Tests', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(Array.isArray(res.body.errors)).toBe(true);
+      expect(res.body.errors[0]).toHaveProperty('path');
+      expect(res.body.errors[0]).toHaveProperty('message');
     });
   });
 

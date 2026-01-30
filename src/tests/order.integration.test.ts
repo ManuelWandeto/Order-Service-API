@@ -138,7 +138,7 @@ describe('Order API Integration Tests', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should return 400 for invalid quantity', async () => {
+    it('should return 400 with detailed validation errors for invalid quantity', async () => {
       const res = await request(app)
         .post('/orders')
         .set('Authorization', `Bearer ${customerToken}`)
@@ -147,9 +147,15 @@ describe('Order API Integration Tests', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(Array.isArray(res.body.errors)).toBe(true);
+      expect(res.body.errors[0]).toHaveProperty('path');
+      expect(res.body.errors[0]).toHaveProperty('message');
+      expect(res.body.errors[0].path).toContain('quantity');
     });
 
-    it('should return 400 for negative quantity', async () => {
+    it('should return 400 with detailed validation errors for negative quantity', async () => {
       const res = await request(app)
         .post('/orders')
         .set('Authorization', `Bearer ${customerToken}`)
@@ -158,9 +164,13 @@ describe('Order API Integration Tests', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(res.body.errors[0]).toHaveProperty('path');
+      expect(res.body.errors[0]).toHaveProperty('message');
     });
 
-    it('should return 400 for empty items array', async () => {
+    it('should return 400 with detailed validation errors for empty items array', async () => {
       const res = await request(app)
         .post('/orders')
         .set('Authorization', `Bearer ${customerToken}`)
@@ -169,6 +179,26 @@ describe('Order API Integration Tests', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(res.body.errors[0]).toHaveProperty('path');
+      expect(res.body.errors[0]).toHaveProperty('message');
+      expect(res.body.errors[0].path).toContain('items');
+    });
+
+    it('should return 400 with detailed validation errors for invalid productId format', async () => {
+      const res = await request(app)
+        .post('/orders')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          items: [{ productId: 'not-a-uuid', quantity: 1 }],
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Validation Error');
+      expect(res.body.errors).toBeDefined();
+      expect(res.body.errors[0]).toHaveProperty('path');
+      expect(res.body.errors[0].path).toContain('productId');
     });
 
     it('should capture unit price at time of order', async () => {
@@ -325,6 +355,31 @@ describe('Order API Integration Tests', () => {
 
       expect(res.status).toBe(401);
     });
+
+    it('should return 409 when customer tries to pay another customer order', async () => {
+      const otherCustomer = await UserModel.create({
+        email: 'other@example.com',
+        passwordHash: 'hash',
+        role: UserRole.CUSTOMER,
+      });
+      const otherToken = generateToken(otherCustomer.id, otherCustomer.role);
+
+      const res = await request(app)
+        .post(`/orders/${orderId}/pay`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(409);
+      expect(res.body.message).toContain('your own orders');
+    });
+
+    it('should allow admin to pay any order', async () => {
+      const res = await request(app)
+        .post(`/orders/${orderId}/pay`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe(OrderStatus.PAID);
+    });
   });
 
   describe('POST /orders/:id/cancel', () => {
@@ -388,6 +443,58 @@ describe('Order API Integration Tests', () => {
       const res = await request(app).post(`/orders/${orderId}/cancel`);
 
       expect(res.status).toBe(401);
+    });
+
+    it('should return 409 when customer tries to cancel another customer order', async () => {
+      const otherCustomer = await UserModel.create({
+        email: 'other@example.com',
+        passwordHash: 'hash',
+        role: UserRole.CUSTOMER,
+      });
+      const otherToken = generateToken(otherCustomer.id, otherCustomer.role);
+
+      const res = await request(app)
+        .post(`/orders/${orderId}/cancel`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(409);
+      expect(res.body.message).toContain('your own orders');
+    });
+
+    it('should return 403 when customer tries to cancel paid order', async () => {
+      await OrderModel.findByIdAndUpdate(orderId, { status: OrderStatus.PAID });
+
+      const res = await request(app)
+        .post(`/orders/${orderId}/cancel`)
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain('Cannot cancel paid orders');
+    });
+
+    it('should allow admin to cancel paid order', async () => {
+      await OrderModel.findByIdAndUpdate(orderId, { status: OrderStatus.PAID });
+
+      const res = await request(app)
+        .post(`/orders/${orderId}/cancel`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe(OrderStatus.CANCELLED);
+
+      const product1 = await ProductModel.findById(product1Id);
+      const product2 = await ProductModel.findById(product2Id);
+      expect(product1?.stock).toBe(100);
+      expect(product2?.stock).toBe(50);
+    });
+
+    it('should allow admin to cancel any customer order', async () => {
+      const res = await request(app)
+        .post(`/orders/${orderId}/cancel`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe(OrderStatus.CANCELLED);
     });
   });
 });

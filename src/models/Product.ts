@@ -13,7 +13,7 @@ export interface IProduct extends Document {
 const ProductSchema: Schema = new Schema(
   {
     _id: { type: String, default: uuidv4 },
-    name: { type: String, required: true },
+    name: { type: String, required: true, unique: true },
     price: { type: Number, required: true, validate: { validator: Number.isInteger, message: 'Price must be an integer (cents)' } },
     stock: { type: Number, required: true, min: 0, validate: { validator: Number.isInteger, message: 'Stock must be an integer' } },
   },
