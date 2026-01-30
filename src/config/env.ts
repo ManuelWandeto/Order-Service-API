@@ -24,11 +24,4 @@ if (!envVars.success) {
   process.exit(1);
 }
 
-// Debug logging for Docker
-console.log('🔍 Environment loaded:', {
-  MONGO_URI: envVars.data.MONGO_URI,
-  NODE_ENV: envVars.data.NODE_ENV,
-  PORT: envVars.data.PORT
-});
-
 export const env = envVars.data;
