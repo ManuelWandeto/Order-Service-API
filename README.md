@@ -109,11 +109,11 @@ pnpm seed
 
 ### With Docker Compose
 
-When using Docker Compose, seed the database by running the seed script inside the app container:
+When using Docker Compose, seed the database by running the compiled seed script inside the app container:
 
 ```bash
 # After starting containers with docker compose up -d
-docker compose exec app pnpm seed
+docker compose exec app pnpm seed:prod
 ```
 
 Alternatively, you can run it as a one-off command:
