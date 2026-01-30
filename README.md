@@ -55,10 +55,51 @@ pnpm start
 
 ### With Docker
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
+**Note:** The MongoDB container automatically initializes a replica set on first startup using the script at `docker/mongo/init-replica-set.sh`. This is required for transaction support.
+
+The replica set is configured with `127.0.0.1:27017` internally, but the app connects via the Docker network hostname `mongo:27017`. MongoDB handles the hostname resolution automatically for external clients.
+
+The healthcheck verifies:
+- MongoDB is accepting connections
+- Replica set is initialized with a PRIMARY node
+
+**First startup may take 30-40 seconds** as MongoDB initializes the replica set.
+
+**Important:** If you've previously run `docker compose up` and are experiencing connection issues, you need to remove the old volume:
+```bash
+docker compose down -v  # Remove containers AND volumes
+docker compose up -d    # Fresh start with correct replica set config
+```
+
+### MongoDB Replica Set Setup (Manual)
+
+If you're running MongoDB outside Docker or need to manually initialize the replica set:
+
+1. **Start MongoDB with replica set enabled:**
+```bash
+mongod --replSet rs0 --bind_ip_all
+```
+
+2. **Initialize the replica set:**
+```bash
+mongosh --eval "rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] })"
+```
+
+3. **Verify replica set status:**
+```bash
+mongosh --eval "rs.status()"
+```
+
+You should see `"ok": 1` and one member with `"stateStr": "PRIMARY"`.
+
+**Why Replica Set?** MongoDB transactions require a replica set, even for single-node deployments. This ensures ACID compliance for order processing and stock management.
+
 ## Database Seeding
+
+### Local Development (without Docker)
 
 Populate the database with sample data:
 
@@ -66,11 +107,36 @@ Populate the database with sample data:
 pnpm seed
 ```
 
+### With Docker Compose
+
+When using Docker Compose, seed the database by running the seed script inside the app container:
+
+```bash
+# After starting containers with docker compose up -d
+docker compose exec app pnpm seed
+```
+
+Alternatively, you can run it as a one-off command:
+
+```bash
+docker compose run --rm app pnpm seed
+```
+
 **Default Credentials:**
 - Admin: `admin@example.com` / `admin123`
 - Customer: `customer1@example.com` / `customer123`
+- Customer: `customer2@example.com` / `customer123`
+
+**Sample Products Created:**
+- Laptop ($999.99, stock: 10)
+- Wireless Mouse ($29.99, stock: 50)
+- Mechanical Keyboard ($129.99, stock: 25)
+- USB-C Cable ($14.99, stock: 100)
+- 27" Monitor ($349.99, stock: 15)
 
 ## Testing
+
+### Local Development
 
 ```bash
 # Run all tests
@@ -82,6 +148,20 @@ pnpm test:watch
 # Specific test file
 pnpm test src/tests/order.test.ts
 ```
+
+### With Docker Compose
+
+Tests can also be run inside the Docker container:
+
+```bash
+# Run all tests
+docker compose exec app pnpm test
+
+# Or as a one-off command
+docker compose run --rm app pnpm test
+```
+
+**Note:** Tests use `mongodb-memory-server` which creates an in-memory MongoDB replica set, so they don't depend on the Docker MongoDB container.
 
 ## API Endpoints
 
@@ -447,9 +527,9 @@ See [LOGGING.md](./LOGGING.md) for detailed logging documentation.
 docker build -t order-service-api .
 ```
 
-2. Run with docker-compose:
+2. Run with Docker Compose:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 3. The API will be available at `http://localhost:3000`
