@@ -252,7 +252,7 @@ describe('OrderService', () => {
       mockOrderRepo.findById.mockResolvedValue(mockOrder as any);
       mockOrderRepo.update.mockResolvedValue(updatedOrder as any);
 
-      const result = await orderService.payOrder(orderId, userId);
+      const result = await orderService.payOrder(orderId, userId, 'customer');
 
       expect(mockOrderRepo.findById).toHaveBeenCalledWith(orderId);
       expect(mockOrderRepo.update).toHaveBeenCalledWith(orderId, { status: OrderStatus.PAID });
@@ -269,7 +269,7 @@ describe('OrderService', () => {
 
       mockOrderRepo.findById.mockResolvedValue(mockOrder as any);
 
-      const result = await orderService.payOrder(orderId, userId);
+      const result = await orderService.payOrder(orderId, userId, 'customer');
 
       expect(mockOrderRepo.findById).toHaveBeenCalledWith(orderId);
       expect(mockOrderRepo.update).not.toHaveBeenCalled();
@@ -279,7 +279,7 @@ describe('OrderService', () => {
     it('should throw error if order not found', async () => {
       mockOrderRepo.findById.mockResolvedValue(null);
 
-      await expect(orderService.payOrder(orderId, userId)).rejects.toThrow('Order not found');
+      await expect(orderService.payOrder(orderId, userId, 'customer')).rejects.toThrow('Order not found');
       expect(mockOrderRepo.update).not.toHaveBeenCalled();
     });
 
@@ -293,7 +293,7 @@ describe('OrderService', () => {
 
       mockOrderRepo.findById.mockResolvedValue(mockOrder as any);
 
-      await expect(orderService.payOrder(orderId, userId)).rejects.toThrow('Order is cancelled');
+      await expect(orderService.payOrder(orderId, userId, 'customer')).rejects.toThrow('Order is cancelled');
       expect(mockOrderRepo.update).not.toHaveBeenCalled();
     });
 
@@ -308,7 +308,7 @@ describe('OrderService', () => {
       mockOrderRepo.findById.mockResolvedValue(mockOrder as any);
       mockOrderRepo.update.mockResolvedValue(null);
 
-      await expect(orderService.payOrder(orderId, userId)).rejects.toThrow('Failed to update order');
+      await expect(orderService.payOrder(orderId, userId, 'customer')).rejects.toThrow('Failed to update order');
     });
   });
 
@@ -345,7 +345,7 @@ describe('OrderService', () => {
       };
       (mongoose.model as jest.Mock).mockReturnValue(mockProductModel);
 
-      const result = await orderService.cancelOrder(orderId);
+      const result = await orderService.cancelOrder(orderId, userId, 'customer');
 
       expect(mockOrderRepo.findById).toHaveBeenCalledWith(orderId);
       expect(mockProductModel.findOneAndUpdate).toHaveBeenCalledTimes(2);
@@ -380,7 +380,7 @@ describe('OrderService', () => {
 
       mockOrderRepo.findById.mockResolvedValue(mockOrder as any);
 
-      const result = await orderService.cancelOrder(orderId);
+      const result = await orderService.cancelOrder(orderId, userId, 'customer');
 
       expect(mockOrderRepo.findById).toHaveBeenCalledWith(orderId);
       expect(mockSession.abortTransaction).toHaveBeenCalled();
@@ -391,7 +391,7 @@ describe('OrderService', () => {
     it('should throw error if order not found', async () => {
       mockOrderRepo.findById.mockResolvedValue(null);
 
-      await expect(orderService.cancelOrder(orderId)).rejects.toThrow('Order not found');
+      await expect(orderService.cancelOrder(orderId, userId, 'customer')).rejects.toThrow('Order not found');
       expect(mockSession.abortTransaction).toHaveBeenCalled();
       expect(mockSession.endSession).toHaveBeenCalled();
     });
@@ -412,7 +412,7 @@ describe('OrderService', () => {
       };
       (mongoose.model as jest.Mock).mockReturnValue(mockProductModel);
 
-      await expect(orderService.cancelOrder(orderId)).rejects.toThrow('Database error');
+      await expect(orderService.cancelOrder(orderId, userId, 'customer')).rejects.toThrow('Database error');
       expect(mockSession.abortTransaction).toHaveBeenCalled();
       expect(mockSession.endSession).toHaveBeenCalled();
     });
@@ -434,7 +434,7 @@ describe('OrderService', () => {
       };
       (mongoose.model as jest.Mock).mockReturnValue(mockProductModel);
 
-      await expect(orderService.cancelOrder(orderId)).rejects.toThrow('Failed to update order');
+      await expect(orderService.cancelOrder(orderId, userId, 'customer')).rejects.toThrow('Failed to update order');
       expect(mockSession.abortTransaction).toHaveBeenCalled();
       expect(mockSession.endSession).toHaveBeenCalled();
     });
