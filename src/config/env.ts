@@ -1,8 +1,14 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Only load .env file if it exists (for local development)
+// In Docker, environment variables are passed via docker-compose
+const envPath = path.resolve(__dirname, '../../.env');
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
 
 const envSchema = z.object({
   PORT: z.string().default('3000'),
@@ -17,5 +23,12 @@ if (!envVars.success) {
   console.error('❌ Invalid environment variables:', envVars.error.format());
   process.exit(1);
 }
+
+// Debug logging for Docker
+console.log('🔍 Environment loaded:', {
+  MONGO_URI: envVars.data.MONGO_URI,
+  NODE_ENV: envVars.data.NODE_ENV,
+  PORT: envVars.data.PORT
+});
 
 export const env = envVars.data;
