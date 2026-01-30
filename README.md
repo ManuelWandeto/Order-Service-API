@@ -99,7 +99,7 @@ You should see `"ok": 1` and one member with `"stateStr": "PRIMARY"`.
 
 ## Database Seeding
 
-### Local Development (without Docker)
+### Local Development
 
 Populate the database with sample data:
 
@@ -107,19 +107,13 @@ Populate the database with sample data:
 pnpm seed
 ```
 
-### With Docker Compose
+### Alternatively With Docker Compose
 
-When using Docker Compose, seed the database by running the compiled seed script inside the app container:
+When using Docker Compose, you can alternatively seed the database by running the compiled seed script inside the app container:
 
 ```bash
 # After starting containers with docker compose up -d
 docker compose exec app pnpm seed:prod
-```
-
-Alternatively, you can run it as a one-off command:
-
-```bash
-docker compose run --rm app pnpm seed
 ```
 
 **Default Credentials:**
@@ -147,18 +141,6 @@ pnpm test:watch
 
 # Specific test file
 pnpm test src/tests/order.test.ts
-```
-
-### With Docker Compose
-
-Tests can also be run inside the Docker container:
-
-```bash
-# Run all tests
-docker compose exec app pnpm test
-
-# Or as a one-off command
-docker compose run --rm app pnpm test
 ```
 
 **Note:** Tests use `mongodb-memory-server` which creates an in-memory MongoDB replica set, so they don't depend on the Docker MongoDB container.
