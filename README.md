@@ -86,19 +86,271 @@ pnpm test src/tests/order.test.ts
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login and get JWT token
+
+#### Register User
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "customer@example.com",
+    "password": "password123"
+  }'
+```
+
+**Response (201 Created):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "customer@example.com",
+    "role": "customer",
+    "createdAt": "2026-01-29T10:30:00.000Z",
+    "updatedAt": "2026-01-29T10:30:00.000Z"
+  }
+}
+```
+
+#### Login
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "customer@example.com",
+    "password": "password123"
+  }'
+```
+
+**Response (200 OK):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "customer@example.com",
+    "role": "customer"
+  }
+}
+```
 
 ### Products
-- `GET /products` - List all products
-- `POST /products` - Create product (Admin only)
-- `PATCH /products/:id` - Update product (Admin only)
+
+#### Get All Products
+```bash
+curl http://localhost:3000/products
+```
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "name": "Wireless Mouse",
+    "price": 2999,
+    "stock": 50,
+    "createdAt": "2026-01-29T10:35:00.000Z",
+    "updatedAt": "2026-01-29T10:35:00.000Z"
+  }
+]
+```
+
+#### Create Product (Admin only)
+```bash
+curl -X POST http://localhost:3000/products \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "name": "Wireless Mouse",
+    "price": 2999,
+    "stock": 50
+  }'
+```
+
+**Note:** Price is in cents (2999 = $29.99)
+
+**Response (201 Created):**
+```json
+{
+  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "name": "Wireless Mouse",
+  "price": 2999,
+  "stock": 50,
+  "createdAt": "2026-01-29T10:35:00.000Z",
+  "updatedAt": "2026-01-29T10:35:00.000Z"
+}
+```
+
+#### Update Product (Admin only)
+```bash
+curl -X PATCH http://localhost:3000/products/7c9e6679-7425-40de-944b-e07fc1f90ae7 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "price": 2499,
+    "stock": 75
+  }'
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "name": "Wireless Mouse",
+  "price": 2499,
+  "stock": 75,
+  "updatedAt": "2026-01-29T10:40:00.000Z"
+}
+```
 
 ### Orders
-- `POST /orders` - Create order (Customer, transactional)
-- `GET /orders` - List orders (own orders or all for Admin)
-- `POST /orders/:id/pay` - Mark order as paid
-- `POST /orders/:id/cancel` - Cancel order (restores stock)
+
+#### Create Order (Customer only)
+```bash
+curl -X POST http://localhost:3000/orders \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CUSTOMER_TOKEN" \
+  -d '{
+    "items": [
+      {
+        "productId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "quantity": 2
+      },
+      {
+        "productId": "8d0f7780-8536-51ef-a055-f18gd2g01bf8",
+        "quantity": 1
+      }
+    ]
+  }'
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": "9e1g8891-9647-62fg-b166-g29he3h12cg9",
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "items": [
+    {
+      "productId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "quantity": 2,
+      "unitPrice": 2999
+    },
+    {
+      "productId": "8d0f7780-8536-51ef-a055-f18gd2g01bf8",
+      "quantity": 1,
+      "unitPrice": 12999
+    }
+  ],
+  "total": 18997,
+  "status": "created",
+  "createdAt": "2026-01-29T10:45:00.000Z",
+  "updatedAt": "2026-01-29T10:45:00.000Z"
+}
+```
+
+#### Get Orders
+```bash
+# Customers see only their orders, admins see all orders
+curl http://localhost:3000/orders \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "9e1g8891-9647-62fg-b166-g29he3h12cg9",
+    "userId": "550e8400-e29b-41d4-a716-446655440000",
+    "items": [...],
+    "total": 5998,
+    "status": "created",
+    "createdAt": "2026-01-29T10:45:00.000Z",
+    "updatedAt": "2026-01-29T10:45:00.000Z"
+  }
+]
+```
+
+#### Pay Order
+```bash
+curl -X POST http://localhost:3000/orders/9e1g8891-9647-62fg-b166-g29he3h12cg9/pay \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": "9e1g8891-9647-62fg-b166-g29he3h12cg9",
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "items": [...],
+  "total": 5998,
+  "status": "paid",
+  "updatedAt": "2026-01-29T10:50:00.000Z"
+}
+```
+
+**Note:** Idempotent - calling multiple times on already paid order returns 200 OK
+
+#### Cancel Order
+```bash
+curl -X POST http://localhost:3000/orders/9e1g8891-9647-62fg-b166-g29he3h12cg9/cancel \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": "9e1g8891-9647-62fg-b166-g29he3h12cg9",
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "items": [...],
+  "total": 5998,
+  "status": "cancelled",
+  "updatedAt": "2026-01-29T10:55:00.000Z"
+}
+```
+
+**Note:** Idempotent - calling multiple times on already cancelled order returns 200 OK. Stock is restored atomically.
+
+### Common Error Responses
+
+**400 Bad Request (Validation Error):**
+```json
+{
+  "message": "Validation Error",
+  "errors": [
+    {
+      "path": ["email"],
+      "message": "Invalid email"
+    }
+  ]
+}
+```
+
+**401 Unauthorized:**
+```json
+{
+  "message": "Access denied. No token provided."
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "message": "Access denied."
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "message": "Product not found"
+}
+```
+
+**409 Conflict:**
+```json
+{
+  "message": "Email already exists"
+}
+```
 
 ## Architecture
 
@@ -112,7 +364,6 @@ src/
 ├── services/        # Business logic
 ├── scripts/         # Utility scripts (seed, etc.)
 ├── tests/           # Integration tests
-├── types/           # TypeScript type definitions
 ├── app.ts           # Express app setup
 └── server.ts        # Entry point
 ```
