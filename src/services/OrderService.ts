@@ -3,6 +3,7 @@ import { ProductRepository } from '../repositories/ProductRepository';
 import { OrderRepository } from '../repositories/OrderRepository';
 import { IOrder, OrderStatus } from '../models/Order';
 import { IProduct } from '../models/Product';
+import logger from '../utils/logger';
 
 interface CreateOrderParams {
   userId: string;
@@ -87,6 +88,14 @@ export class OrderService {
       );
 
       await session.commitTransaction();
+
+      logger.info('Order created', {
+        orderId: order.id,
+        userId: params.userId,
+        total: order.total,
+        itemCount: order.items.length,
+      });
+
       return order;
     } catch (error) {
       await session.abortTransaction();
@@ -119,6 +128,13 @@ export class OrderService {
     // Update status
     const updatedOrder = await this.orderRepo.update(orderId, { status: OrderStatus.PAID });
     if (!updatedOrder) throw new Error('Failed to update order');
+
+    logger.info('Order paid', {
+      orderId: updatedOrder.id,
+      userId: updatedOrder.userId,
+      total: updatedOrder.total,
+    });
+
     return updatedOrder;
   }
 
@@ -160,6 +176,14 @@ export class OrderService {
       if (!updatedOrder) throw new Error('Failed to update order');
 
       await session.commitTransaction();
+
+      logger.info('Order cancelled', {
+        orderId: updatedOrder.id,
+        userId: updatedOrder.userId,
+        total: updatedOrder.total,
+        wasPaid: order.status === OrderStatus.PAID,
+      });
+
       return updatedOrder;
     } catch (error) {
       await session.abortTransaction();

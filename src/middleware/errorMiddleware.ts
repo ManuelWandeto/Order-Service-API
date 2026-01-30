@@ -1,8 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import logger from '../utils/logger';
 
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('❌ Error:', err.message);
+  logger.error('❌ Error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+  });
 
   // Custom parsing can be added here (e.g., ZodError, Mongoose ValidationError)
   if (err instanceof ZodError) {

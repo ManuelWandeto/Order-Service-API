@@ -12,6 +12,7 @@ A Node.js/Express TypeScript API implementing a strict Controller-Service-Reposi
 - ✅ **TypeScript** - Full type safety with Zod validation
 - ✅ **Docker Support** - Easy deployment with docker-compose
 - ✅ **Integration Tests** - Using MongoMemoryReplSet
+- ✅ **File Logging** - Winston-based logging with rotation and multiple transports
 
 ## Prerequisites
 
@@ -34,7 +35,7 @@ cp .env.example .env
 
 ```env
 PORT=3000
-MONGO_URI=mongodb://localhost:27017/order-service
+MONGO_URI=mongodb://localhost:27017/order-service?replicaSet=rs0
 JWT_SECRET=your-secret-key-here
 NODE_ENV=development
 ```
@@ -151,6 +152,42 @@ pnpm lint
 # Type check
 pnpm type-check
 ```
+
+## Logging
+
+The application uses **Winston** for comprehensive logging with both console and file outputs.
+
+### Log Files
+
+Logs are written to the `/logs` directory:
+- `combined.log` - All logs (info, warn, error, http)
+- `error.log` - Error logs only
+
+### Log Rotation
+- Maximum file size: 5MB per file
+- Maximum files kept: 5 (oldest automatically deleted)
+
+### Logged Events
+- HTTP requests (method, URL, status, response time)
+- User registration and login
+- Order creation, payment, and cancellation
+- Database connection events
+- All errors with stack traces
+
+### Viewing Logs
+
+```bash
+# Tail all logs
+tail -f logs/combined.log
+
+# View errors only
+tail -f logs/error.log
+
+# Search for specific events
+grep "Order created" logs/combined.log
+```
+
+See [LOGGING.md](./LOGGING.md) for detailed logging documentation.
 
 ## Deployment
 

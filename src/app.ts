@@ -8,13 +8,14 @@ import * as authController from './controllers/authController';
 import * as productController from './controllers/productController';
 import * as orderController from './controllers/orderController';
 import { UserRole } from './models/User';
+import logger, { morganStream } from './utils/logger';
 
 const app = express();
 
 // Middleware
 app.use(helmet());
 app.use(cors());
-app.use(morgan('dev'));
+app.use(morgan('combined', { stream: morganStream }));
 app.use(express.json());
 
 // Routes
