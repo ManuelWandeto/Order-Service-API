@@ -9,12 +9,14 @@ services:
       - JWT_SECRET=supersecretkey
       - NODE_ENV=development
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     networks:
       - app-network
 
   mongo:
     image: mongo:6-jammy
+    hostname: mongo
     ports:
       - "27017:27017"
     volumes:
@@ -23,6 +25,20 @@ services:
     networks:
       - app-network
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: |
+        mongosh --quiet --eval "
+        try {
+          rs.status();
+          db.adminCommand('ping');
+        } catch (err) {
+          quit(1);
+        }
+        "
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
 networks:
   app-network:
